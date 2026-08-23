@@ -1,0 +1,40 @@
+# Render Blueprint: deploys the FastAPI backend as a web service and the
+# React frontend as a static site. From the Render dashboard: New -> Blueprint,
+# point it at this repo, and Render will pick this file up automatically.
+#
+# You'll still need to fill in the secret env vars (marked sync: false) in
+# the Render dashboard after the first deploy -- they are never committed
+# to the repo.
+
+services:
+  - type: web
+    name: intrograph-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: COGNODB_URI
+        sync: false # bolt+s://<instance-id>.databases.cognodb.cloud
+      - key: COGNODB_USER
+        value: cognodb
+      - key: COGNODB_PASSWORD
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false # e.g. https://intrograph-frontend.onrender.com
+
+  - type: web
+    name: intrograph-frontend
+    runtime: static
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false # e.g. https://intrograph-api.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
